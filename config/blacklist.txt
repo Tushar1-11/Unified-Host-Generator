@@ -1,0 +1,4 @@
+# Custom domains to block
+
+example-ad-domain.com
+example-tracker.com

@@ -1,0 +1,44 @@
+{
+  "sources": [
+    {
+      "name": "stevenblack",
+      "url": "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
+      "enabled": true
+    },
+    {
+      "name": "someonewhocares",
+      "url": "https://someonewhocares.org/hosts/zero/hosts",
+      "enabled": true
+    },
+    {
+      "name": "urlhaus",
+      "url": "https://urlhaus.abuse.ch/downloads/hostfile/",
+      "enabled": true
+    },
+    {
+      "name": "tiuxo-ads",
+      "url": "https://raw.githubusercontent.com/tiuxo/hosts/master/ads",
+      "enabled": true
+    },
+    {
+      "name": "unchecky-ads",
+      "url": "https://raw.githubusercontent.com/FadeMind/hosts.extras/master/UncheckyAds/hosts",
+      "enabled": true
+    },
+    {
+      "name": "yoyo-adservers",
+      "url": "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext&useip=0.0.0.0",
+      "enabled": true
+    },
+    {
+      "name": "kadhosts",
+      "url": "https://raw.githubusercontent.com/FiltersHeroes/KADhosts/master/KADhosts.txt",
+      "enabled": true
+    },
+    {
+      "name": "windows-spy-blocker",
+      "url": "https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt",
+      "enabled": true
+    }
+  ]
+}
