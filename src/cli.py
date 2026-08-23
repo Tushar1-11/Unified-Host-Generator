@@ -1,5 +1,6 @@
 import argparse
 import logging
+import time
 from pathlib import Path
 
 from .config import (
@@ -10,13 +11,21 @@ from .config import (
 
 from .fetcher import fetch_source
 from .parser import parse_blocklist
-from .validator import validate_domains
-from .filters import apply_smart_whitelist
+from .validator import (
+    validate_domains,
+    is_valid_domain,
+)
+
+from .filters import (
+    apply_smart_whitelist,
+)
+
 from .generator import (
     write_hosts_file,
     compress_file,
     backup_file,
 )
+
 from .utils import (
     setup_logging,
     print_statistics,
@@ -27,20 +36,30 @@ logger = logging.getLogger(__name__)
 
 
 def generate_hosts(args):
-    """Main generation workflow."""
+
+    start_time = time.perf_counter()
 
     sources = load_sources()
 
-    all_domains = set()
+    all_domains = []
+    source_statistics = []
+
     raw_entries = 0
     successful_sources = 0
+
+    # =========================================================
+    # DOWNLOAD AND PARSE SOURCES
+    # =========================================================
 
     for source in sources:
 
         name = source.get("name", "unknown")
         url = source.get("url")
 
-        logger.info("Downloading source: %s", name)
+        logger.info(
+            "Downloading source: %s",
+            name
+        )
 
         if not url:
             logger.warning(
@@ -50,37 +69,80 @@ def generate_hosts(args):
             continue
 
         try:
+
             content = fetch_source(url)
 
-            raw_entries += len(
+            source_lines = len(
                 content.splitlines()
             )
 
-            domains = parse_blocklist(content)
+            parsed_domains = parse_blocklist(
+                content
+            )
 
-            all_domains.update(domains)
+            unique_source_domains = set(
+                parsed_domains
+            )
+
+            all_domains.extend(
+                parsed_domains
+            )
+
+            raw_entries += source_lines
 
             successful_sources += 1
+
+            source_statistics.append({
+                "name": name,
+                "lines": source_lines,
+                "parsed": len(parsed_domains),
+                "unique": len(unique_source_domains),
+            })
 
             logger.info(
                 "%s: %d domains",
                 name,
-                len(domains)
+                len(unique_source_domains)
             )
 
         except Exception as error:
+
             logger.warning(
                 "Failed to process %s: %s",
                 name,
                 error
             )
 
-    # Validate
-    valid_domains = validate_domains(all_domains)
+    # =========================================================
+    # UNIQUE DOMAINS
+    # =========================================================
 
-    duplicates = len(all_domains) - len(valid_domains)
+    total_parsed = len(all_domains)
 
-    # Load filters
+    unique_domains = set(all_domains)
+
+    duplicates = (
+        total_parsed -
+        len(unique_domains)
+    )
+
+    # =========================================================
+    # VALIDATION
+    # =========================================================
+
+    valid_domains = validate_domains(
+        unique_domains
+    )
+
+    invalid_domains = (
+        len(unique_domains) -
+        len(valid_domains)
+    )
+
+    # =========================================================
+    # LOAD CUSTOM FILTERS
+    # =========================================================
+
     whitelist = load_domain_file(
         "whitelist.txt"
     )
@@ -89,11 +151,18 @@ def generate_hosts(args):
         "blacklist.txt"
     )
 
-    # Add blacklist
-    valid_domains.update(blacklist)
+    # Add custom blacklist
+    valid_domains.update(
+        blacklist
+    )
 
-    # Apply whitelist including subdomains
-    before_whitelist = len(valid_domains)
+    # =========================================================
+    # APPLY WHITELIST
+    # =========================================================
+
+    before_whitelist = len(
+        valid_domains
+    )
 
     final_domains = apply_smart_whitelist(
         valid_domains,
@@ -105,16 +174,25 @@ def generate_hosts(args):
         len(final_domains)
     )
 
-    # Output
+    # =========================================================
+    # OUTPUT
+    # =========================================================
+
     output_path = (
         Path(args.output)
         if args.output
         else OUTPUT_DIR / "hosts.txt"
     )
 
-    # Backup
+    # =========================================================
+    # BACKUP
+    # =========================================================
+
     if args.backup:
-        backup_dir = OUTPUT_DIR / "backups"
+
+        backup_dir = (
+            OUTPUT_DIR / "backups"
+        )
 
         backup = backup_file(
             output_path,
@@ -127,7 +205,10 @@ def generate_hosts(args):
                 backup
             )
 
-    # Generate
+    # =========================================================
+    # GENERATE HOSTS FILE
+    # =========================================================
+
     write_hosts_file(
         final_domains,
         output_path,
@@ -139,8 +220,12 @@ def generate_hosts(args):
         output_path
     )
 
-    # Compression
+    # =========================================================
+    # COMPRESS
+    # =========================================================
+
     if args.compress:
+
         compressed = compress_file(
             output_path
         )
@@ -150,18 +235,39 @@ def generate_hosts(args):
             compressed
         )
 
+    # =========================================================
+    # PROCESSING TIME
+    # =========================================================
+
+    processing_time = (
+        time.perf_counter() -
+        start_time
+    )
+
+    # =========================================================
+    # DISPLAY STATISTICS
+    # =========================================================
+
     print_statistics(
-        successful_sources,
-        raw_entries,
-        len(valid_domains),
-        duplicates,
-        whitelisted,
-        len(final_domains)
+        sources=successful_sources,
+        raw_entries=raw_entries,
+        parsed_domains=total_parsed,
+        unique_domains=len(unique_domains),
+        duplicates=duplicates,
+        invalid_domains=invalid_domains,
+        whitelisted=whitelisted,
+        final_domains=len(final_domains),
+        processing_time=processing_time,
+        source_statistics=source_statistics,
     )
 
     print()
-    print(f"Output: {output_path}")
-    print("Generation complete.")
+    print(
+        f"Output: {output_path}"
+    )
+    print(
+        "Generation complete."
+    )
 
 
 def main():
@@ -178,7 +284,10 @@ def main():
         required=True
     )
 
-    # Generate command
+    # =========================================================
+    # GENERATE COMMAND
+    # =========================================================
+
     generate_parser = subparsers.add_parser(
         "generate",
         help="Generate hosts file"
@@ -219,10 +328,13 @@ def main():
 
     args = parser.parse_args()
 
-    if hasattr(args, "verbose"):
-        setup_logging(args.verbose)
-    else:
-        setup_logging(False)
+    setup_logging(
+        getattr(
+            args,
+            "verbose",
+            False
+        )
+    )
 
     args.func(args)
 

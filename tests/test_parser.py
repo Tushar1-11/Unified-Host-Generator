@@ -5,6 +5,7 @@ from src.parser import (
 
 
 def test_extract_hosts_format():
+
     assert (
         extract_domain(
             "0.0.0.0 ads.example.com"
@@ -14,6 +15,7 @@ def test_extract_hosts_format():
 
 
 def test_extract_plain_domain():
+
     assert (
         extract_domain(
             "tracker.example.com"
@@ -23,6 +25,7 @@ def test_extract_plain_domain():
 
 
 def test_ignore_comment():
+
     assert (
         extract_domain(
             "# this is a comment"
@@ -39,6 +42,9 @@ def test_parse_duplicates():
     tracker.example.com
     """
 
-    domains = parse_blocklist(content)
+    domains = parse_blocklist(
+        content
+    )
 
-    assert len(domains) == 2
+    assert len(domains) == 3
+    assert len(set(domains)) == 2

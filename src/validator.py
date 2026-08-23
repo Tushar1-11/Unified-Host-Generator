@@ -17,7 +17,6 @@ INVALID_DOMAINS = {
 
 
 def is_valid_domain(domain):
-    """Return True if domain appears to be valid."""
 
     if not domain:
         return False
@@ -27,15 +26,19 @@ def is_valid_domain(domain):
     if domain in INVALID_DOMAINS:
         return False
 
-    # Reject IP addresses
-    if re.fullmatch(r"\d{1,3}(?:\.\d{1,3}){3}", domain):
+    # Reject IPv4 addresses
+    if re.fullmatch(
+        r"\d{1,3}(?:\.\d{1,3}){3}",
+        domain
+    ):
         return False
 
-    return bool(DOMAIN_REGEX.match(domain))
+    return bool(
+        DOMAIN_REGEX.match(domain)
+    )
 
 
 def validate_domains(domains):
-    """Filter a collection and return only valid domains."""
 
     return {
         domain
